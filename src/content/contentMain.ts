@@ -8,6 +8,12 @@ import { DocsAdapter } from './docsAdapter';
 import { cleanText, extractSentenceFromText } from './textExtraction';
 import { WordAdapter } from './wordAdapter';
 
+declare global {
+  interface Window {
+    __sourceFinderContentBooted?: boolean;
+  }
+}
+
 function createAdapterForLocation(): EditorAdapter | null {
   const host = window.location.hostname;
 
@@ -45,7 +51,9 @@ function deriveManualClaim(adapter: EditorAdapter): string {
 
 const adapter = createAdapterForLocation();
 
-if (adapter) {
+if (adapter && !window.__sourceFinderContentBooted) {
+  window.__sourceFinderContentBooted = true;
+
   adapter.start((claim) => {
     postClaimCandidate(adapter, cleanText(claim), 'auto');
   });
