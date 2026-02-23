@@ -47,6 +47,25 @@ function formatUpdatedAt(timestamp: number): string {
   });
 }
 
+function panelState(status: SuggestionState['status'] | undefined): {
+  label: string;
+  tone: 'ready' | 'loading' | 'error' | 'idle';
+} {
+  if (status === 'loading') {
+    return { label: 'Scanning', tone: 'loading' };
+  }
+
+  if (status === 'error') {
+    return { label: 'Attention', tone: 'error' };
+  }
+
+  if (status === 'ready') {
+    return { label: 'Ready', tone: 'ready' };
+  }
+
+  return { label: 'Standby', tone: 'idle' };
+}
+
 function SourceCard({
   suggestion,
   onCopied,
@@ -61,13 +80,15 @@ function SourceCard({
 
   return (
     <article className="source-card">
-      <header>
+      <header className="source-card-header">
         <p className={`confidence-pill ${confidenceClass(suggestion.confidence)}`}>
           {confidenceLabel(suggestion.confidence)}
         </p>
         <h3>{suggestion.title}</h3>
-        <p className="source-meta">{authorLine}</p>
-        <p className="source-meta muted">{venueLine}</p>
+        <div className="source-metadata">
+          <p className="source-meta">{authorLine}</p>
+          <p className="source-meta muted">{venueLine}</p>
+        </div>
       </header>
 
       {suggestion.why ? <p className="why">Why: {suggestion.why}</p> : null}
@@ -107,9 +128,16 @@ function SourceCard({
   );
 }
 
-function EmptyState({ description }: { description: string }): JSX.Element {
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}): JSX.Element {
   return (
     <div className="empty-state">
+      <p className="empty-title">{title}</p>
       <p>{description}</p>
     </div>
   );
@@ -222,6 +250,7 @@ export function App(): JSX.Element {
   }, [state, statusMessage]);
 
   const hasContent = state?.status === 'ready' && state.suggestions.length > 0;
+  const stateIndicator = panelState(state?.status);
 
   const runManualLookup = async () => {
     if (activeTabId === null) {
@@ -256,15 +285,23 @@ export function App(): JSX.Element {
   return (
     <main className="panel-root">
       <header className="panel-hero">
-        <p className="eyebrow">Source Finder</p>
+        <div className="hero-top">
+          <p className="eyebrow">Source Finder</p>
+          <p className={`state-chip ${stateIndicator.tone}`}>{stateIndicator.label}</p>
+        </div>
         <h1>Claim Support Console</h1>
         <p className="status-line">{topStatus}</p>
-        {state?.claim ? <p className="claim-line">Claim: {state.claim}</p> : null}
-        {state?.updatedAt ? (
-          <p className="meta-line">
-            {state.site ? `${state.site} • ` : ''}
-            Updated {formatUpdatedAt(state.updatedAt)}
+        {state?.claim ? (
+          <p className="claim-line">
+            <span>Claim</span>
+            {state.claim}
           </p>
+        ) : null}
+        {state?.updatedAt ? (
+          <div className="meta-row">
+            {state.site ? <p className="meta-pill">{state.site}</p> : null}
+            <p className="meta-pill">Updated {formatUpdatedAt(state.updatedAt)}</p>
+          </div>
         ) : null}
       </header>
 
@@ -336,11 +373,17 @@ export function App(): JSX.Element {
       ) : null}
 
       {state?.status === 'ready' && state.suggestions.length === 0 ? (
-        <EmptyState description="No confident match yet. Try a longer sentence or use Lookup Selected Text." />
+        <EmptyState
+          title="No strong matches yet"
+          description="Try a longer sentence or use Lookup Selected Text."
+        />
       ) : null}
 
       {state?.status === 'idle' || !state ? (
-        <EmptyState description="Type a sentence ending with punctuation, or highlight one and click Lookup Selected Text." />
+        <EmptyState
+          title="Waiting for a claim"
+          description="Type a sentence ending with punctuation, or highlight one and click Lookup Selected Text."
+        />
       ) : null}
     </main>
   );
