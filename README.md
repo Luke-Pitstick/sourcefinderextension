@@ -10,7 +10,7 @@ npm run backend:install
 npm run build
 ```
 
-Load `/Users/lukepitstick/sourcefinderextension/dist` as an unpacked extension in `chrome://extensions`.
+Load this repo's `dist` folder as an unpacked extension in `chrome://extensions`.
 
 ## Settings
 
@@ -27,7 +27,7 @@ Open extension options and configure:
 Run the backend from this project:
 
 ```bash
-cd /Users/lukepitstick/sourcefinderextension
+cd /path/to/sourcefinderextension
 npm run backend:start
 ```
 
