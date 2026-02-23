@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Source Finder",
+  "version": "0.1.0",
+  "description": "Find peer-reviewed sources while writing in Google Docs and Word web.",
+  "permissions": ["storage", "sidePanel", "tabs", "activeTab"],
+  "host_permissions": [
+    "https://docs.google.com/*",
+    "https://word.office.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*"
+  ],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://docs.google.com/document/*",
+        "https://word.office.com/*"
+      ],
+      "js": ["assets/contentMain.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Source Finder"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "manual-lookup": {
+      "description": "Find sources for selected text",
+      "suggested_key": {
+        "default": "Ctrl+Shift+F",
+        "mac": "Command+Shift+F"
+      }
+    }
+  }
+}
