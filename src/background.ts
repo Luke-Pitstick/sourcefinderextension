@@ -53,7 +53,9 @@ function isMissingReceiverError(value: unknown): boolean {
   const message = errorMessage(value);
   return (
     message.includes('Receiving end does not exist') ||
-    message.includes('Could not establish connection')
+    message.includes('Could not establish connection') ||
+    message.includes('The message port closed before a response was received') ||
+    message.includes('message channel closed before a response was received')
   );
 }
 
@@ -180,7 +182,27 @@ async function sendManualLookupMessage(tabId: number): Promise<void> {
   });
 }
 
+async function hasContentScriptReceiver(tabId: number): Promise<boolean> {
+  try {
+    const response = (await chrome.tabs.sendMessage(tabId, {
+      type: 'PING_CONTENT_SCRIPT',
+    })) as { ok?: boolean } | undefined;
+
+    return Boolean(response?.ok);
+  } catch (error) {
+    if (isMissingReceiverError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 async function ensureContentScriptInjected(tabId: number): Promise<void> {
+  if (await hasContentScriptReceiver(tabId)) {
+    return;
+  }
+
   await chrome.scripting.executeScript({
     target: { tabId, allFrames: true },
     files: [CONTENT_SCRIPT_FILE],

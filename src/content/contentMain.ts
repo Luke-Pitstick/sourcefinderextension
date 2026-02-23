@@ -1,5 +1,6 @@
 import type {
   ClaimCandidateMessage,
+  ContentScriptPingMessage,
   EditorAdapter,
   ManualLookupEmptyMessage,
   ManualLookupRequestMessage,
@@ -58,23 +59,40 @@ if (adapter && !window.__sourceFinderContentBooted) {
     postClaimCandidate(adapter, cleanText(claim), 'auto');
   });
 
-  chrome.runtime.onMessage.addListener((message: ManualLookupRequestMessage) => {
-    if (!message || message.type !== 'MANUAL_LOOKUP_REQUEST') {
-      return;
-    }
+  chrome.runtime.onMessage.addListener(
+    (
+      message: ManualLookupRequestMessage | ContentScriptPingMessage,
+      _sender,
+      sendResponse,
+    ) => {
+      if (!message) {
+        return;
+      }
 
-    const claim = deriveManualClaim(adapter);
-    if (!claim) {
-      const emptySelectionMessage: ManualLookupEmptyMessage = {
-        type: 'MANUAL_LOOKUP_EMPTY',
-        site: adapter.site,
-      };
-      void chrome.runtime.sendMessage(emptySelectionMessage);
-      return;
-    }
+      if (message.type === 'PING_CONTENT_SCRIPT') {
+        sendResponse({ ok: true });
+        return;
+      }
 
-    postClaimCandidate(adapter, claim, 'manual');
-  });
+      if (message.type !== 'MANUAL_LOOKUP_REQUEST') {
+        return;
+      }
+
+      const claim = deriveManualClaim(adapter);
+      if (!claim) {
+        const emptySelectionMessage: ManualLookupEmptyMessage = {
+          type: 'MANUAL_LOOKUP_EMPTY',
+          site: adapter.site,
+        };
+        void chrome.runtime.sendMessage(emptySelectionMessage);
+        sendResponse({ ok: false, empty: true });
+        return;
+      }
+
+      postClaimCandidate(adapter, claim, 'manual');
+      sendResponse({ ok: true });
+    },
+  );
 
   window.addEventListener('beforeunload', () => {
     adapter.destroy();

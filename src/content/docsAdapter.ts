@@ -7,16 +7,30 @@ import {
   sentenceFromActiveElement,
 } from './textExtraction';
 
-function sentenceFromDocsClipboard(rootDocument: Document): string {
-  const clipboardInput = rootDocument.querySelector(
+function docsClipboardText(rootDocument: Document): string {
+  const selectors = [
     'textarea.kix-clipboard-input',
-  ) as HTMLTextAreaElement | null;
+    'textarea[aria-label*="Ctrl+C"]',
+    'textarea[aria-label*="⌘C"]',
+  ];
 
-  if (!clipboardInput) {
-    return '';
+  for (const selector of selectors) {
+    const textarea = rootDocument.querySelector(selector) as HTMLTextAreaElement | null;
+    if (!textarea) {
+      continue;
+    }
+
+    const value = cleanText(textarea.value || textarea.textContent || '');
+    if (value) {
+      return value;
+    }
   }
 
-  return extractSentenceFromText(clipboardInput.value || '');
+  return '';
+}
+
+function sentenceFromDocsClipboard(rootDocument: Document): string {
+  return extractSentenceFromText(docsClipboardText(rootDocument));
 }
 
 export class DocsAdapter implements EditorAdapter {
@@ -68,7 +82,27 @@ export class DocsAdapter implements EditorAdapter {
       })
       .filter(Boolean);
 
-    return frameSelections[0] || '';
+    if (frameSelections[0]) {
+      return frameSelections[0];
+    }
+
+    const fromMainClipboard = docsClipboardText(document);
+    if (fromMainClipboard) {
+      return fromMainClipboard;
+    }
+
+    const frameClipboard = Array.from(document.querySelectorAll('iframe'))
+      .map((iframe) => {
+        try {
+          const frameDoc = iframe.contentDocument;
+          return frameDoc ? docsClipboardText(frameDoc) : '';
+        } catch {
+          return '';
+        }
+      })
+      .filter(Boolean);
+
+    return frameClipboard[0] || '';
   }
 
   destroy(): void {

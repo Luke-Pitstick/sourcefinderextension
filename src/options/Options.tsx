@@ -19,6 +19,7 @@ const STYLE_CHOICES: Array<{ id: CitationStyle; label: string }> = [
 export function Options(): JSX.Element {
   const [settings, setLocalSettings] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState('');
+  const [statusTone, setStatusTone] = useState<'success' | 'error'>('success');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +32,11 @@ export function Options(): JSX.Element {
   if (loading) {
     return (
       <main className="options-root">
-        <p>Loading settings...</p>
+        <section className="options-panel loading-state">
+          <p className="eyebrow">Source Finder</p>
+          <h1>Control Room Settings</h1>
+          <p>Loading settings...</p>
+        </section>
       </main>
     );
   }
@@ -41,6 +46,7 @@ export function Options(): JSX.Element {
 
     const normalizedApiBase = settings.apiBaseUrl.trim();
     if (!isValidApiBaseUrl(normalizedApiBase)) {
+      setStatusTone('error');
       setStatus('Enter a valid API base URL, such as http://localhost:3000');
       return;
     }
@@ -52,89 +58,106 @@ export function Options(): JSX.Element {
       maxResults: Math.max(1, Math.min(10, Number(settings.maxResults) || 5)),
     };
 
-    await setSettings(nextSettings);
-    setLocalSettings(nextSettings);
-    setStatus('Saved. New lookups will use these settings.');
+    try {
+      await setSettings(nextSettings);
+      setLocalSettings(nextSettings);
+      setStatusTone('success');
+      setStatus('Saved. New lookups will use these settings.');
+    } catch (error) {
+      setStatusTone('error');
+      setStatus(error instanceof Error ? error.message : 'Could not save settings.');
+    }
   };
 
   return (
     <main className="options-root">
       <section className="options-panel">
-        <p className="eyebrow">Source Finder</p>
-        <h1>Extension Settings</h1>
-        <p className="lead">
-          Configure your local backend, citation style, and lookup behavior.
-        </p>
+        <header className="options-header">
+          <p className="eyebrow">Source Finder</p>
+          <h1>Control Room Settings</h1>
+          <p className="lead">
+            Tune backend access, citation formatting, and lookup cadence.
+          </p>
+        </header>
 
         <form onSubmit={onSave} className="options-form">
-          <label>
-            Backend API Base URL
-            <input
-              type="url"
-              value={settings.apiBaseUrl}
-              onChange={(event) => {
-                setLocalSettings((previous) => ({
-                  ...previous,
-                  apiBaseUrl: event.target.value,
-                }));
-              }}
-              placeholder="http://localhost:3000"
-              required
-            />
-          </label>
+          <section className="form-block">
+            <h2>Connection</h2>
+            <label>
+              Backend API Base URL
+              <input
+                type="url"
+                value={settings.apiBaseUrl}
+                onChange={(event) => {
+                  setLocalSettings((previous) => ({
+                    ...previous,
+                    apiBaseUrl: event.target.value,
+                  }));
+                }}
+                placeholder="http://localhost:3000"
+                required
+              />
+            </label>
+          </section>
 
-          <label>
-            Citation Style
-            <select
-              value={settings.style}
-              onChange={(event) => {
-                setLocalSettings((previous) => ({
-                  ...previous,
-                  style: event.target.value as CitationStyle,
-                }));
-              }}
-            >
-              {STYLE_CHOICES.map((style) => (
-                <option key={style.id} value={style.id}>
-                  {style.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <section className="form-block">
+            <h2>Citation Output</h2>
+            <label>
+              Citation Style
+              <select
+                value={settings.style}
+                onChange={(event) => {
+                  setLocalSettings((previous) => ({
+                    ...previous,
+                    style: event.target.value as CitationStyle,
+                  }));
+                }}
+              >
+                {STYLE_CHOICES.map((style) => (
+                  <option key={style.id} value={style.id}>
+                    {style.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
 
-          <label>
-            Auto Lookup Debounce (ms)
-            <input
-              type="number"
-              min={300}
-              max={5000}
-              step={100}
-              value={settings.debounceMs}
-              onChange={(event) => {
-                setLocalSettings((previous) => ({
-                  ...previous,
-                  debounceMs: Number(event.target.value),
-                }));
-              }}
-            />
-          </label>
+          <section className="form-block">
+            <h2>Lookup Behavior</h2>
+            <label>
+              Auto Lookup Debounce (ms)
+              <input
+                type="number"
+                min={300}
+                max={5000}
+                step={100}
+                value={settings.debounceMs}
+                onChange={(event) => {
+                  setLocalSettings((previous) => ({
+                    ...previous,
+                    debounceMs: Number(event.target.value),
+                  }));
+                }}
+              />
+            </label>
 
-          <label>
-            Max Results
-            <input
-              type="number"
-              min={1}
-              max={10}
-              step={1}
-              value={settings.maxResults}
-              onChange={(event) => {
-                setLocalSettings((previous) => ({
-                  ...previous,
-                  maxResults: Number(event.target.value),
-                }));
-              }}
-            />
-          </label>
+            <label>
+              Max Results
+              <input
+                type="number"
+                min={1}
+                max={10}
+                step={1}
+                value={settings.maxResults}
+                onChange={(event) => {
+                  setLocalSettings((previous) => ({
+                    ...previous,
+                    maxResults: Number(event.target.value),
+                  }));
+                }}
+              />
+            </label>
+          </section>
 
           <label className="checkbox">
             <input
@@ -147,13 +170,16 @@ export function Options(): JSX.Element {
                 }));
               }}
             />
-            Enable debug logs in the background worker console.
+            <span>Enable debug logs in the background worker console.</span>
           </label>
 
-          <button type="submit">Save Settings</button>
+          <div className="form-footer">
+            <p className="helper-text">Changes apply to new lookups immediately.</p>
+            <button type="submit">Save Settings</button>
+          </div>
         </form>
 
-        {status ? <p className="status">{status}</p> : null}
+        {status ? <p className={`status ${statusTone}`}>{status}</p> : null}
       </section>
     </main>
   );

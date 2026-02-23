@@ -54,6 +54,10 @@ export interface ManualLookupRequestMessage {
   type: 'MANUAL_LOOKUP_REQUEST';
 }
 
+export interface ContentScriptPingMessage {
+  type: 'PING_CONTENT_SCRIPT';
+}
+
 export interface ManualLookupEmptyMessage {
   type: 'MANUAL_LOOKUP_EMPTY';
   site: EditorSite;
@@ -82,6 +86,7 @@ export interface SuggestionsUpdatedMessage {
 export type RuntimeMessage =
   | ClaimCandidateMessage
   | ManualLookupRequestMessage
+  | ContentScriptPingMessage
   | ManualLookupEmptyMessage
   | GetTabStateMessage
   | TriggerManualLookupMessage

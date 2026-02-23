@@ -116,6 +116,19 @@ function sentenceFromInputElement(element: HTMLInputElement | HTMLTextAreaElemen
   return extractSentenceFromText(beforeCursor);
 }
 
+function isTextareaElement(element: Element): element is HTMLTextAreaElement {
+  return element.tagName.toLowerCase() === 'textarea';
+}
+
+function isTextInputElement(element: Element): element is HTMLInputElement {
+  if (element.tagName.toLowerCase() !== 'input') {
+    return false;
+  }
+
+  const inputType = ((element as HTMLInputElement).type || 'text').toLowerCase();
+  return inputType === 'text';
+}
+
 function sentenceFromContentEditable(element: HTMLElement): string {
   const selection = element.ownerDocument.getSelection();
   if (!selection || selection.rangeCount === 0) {
@@ -130,20 +143,18 @@ function sentenceFromContentEditable(element: HTMLElement): string {
 }
 
 export function sentenceFromActiveElement(rootDocument: Document): string {
-  const activeElement = rootDocument.activeElement as HTMLElement | null;
+  const activeElement = rootDocument.activeElement as Element | null;
   if (!activeElement) {
     return '';
   }
 
-  if (
-    activeElement instanceof HTMLTextAreaElement ||
-    (activeElement instanceof HTMLInputElement && activeElement.type === 'text')
-  ) {
+  if (isTextareaElement(activeElement) || isTextInputElement(activeElement)) {
     return sentenceFromInputElement(activeElement);
   }
 
-  if (activeElement.isContentEditable) {
-    return sentenceFromContentEditable(activeElement);
+  const editableElement = activeElement as HTMLElement;
+  if (editableElement.isContentEditable) {
+    return sentenceFromContentEditable(editableElement);
   }
 
   return '';
